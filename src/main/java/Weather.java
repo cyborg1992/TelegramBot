@@ -77,11 +77,11 @@ public class Weather {
             while ((line = bufferedReader.readLine()) != null) {
                 content.append(line).append("\n");
             }
+            log.info(content.toString());
             bufferedReader.close();
         } catch (Exception e) {
-            log.error("Error", e);
+            log.error("", e);
         }
-        log.info(content.toString());
         return content.toString();
     }
 
