@@ -10,17 +10,14 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 public class Bot extends TelegramLongPollingBot {
     private static final Logger log = Logger.getLogger(Bot.class);
-    private static final String BOT_NAME = "TestMyTemporaryBot";
-    private static final String BOT_TOKEN = "6013122445:AAFjT-SO3j5-xdeQ2yDc4vd3-0sBlFvQKZg";
 
-    @Override
-    public String getBotUsername() {
-        return BOT_NAME;
+    public Bot() {
+        super(BotParams.BOT_TOKEN);
     }
 
     @Override
-    public String getBotToken() {
-        return BOT_TOKEN;
+    public String getBotUsername() {
+        return BotParams.BOT_NAME;
     }
 
     @Override
@@ -28,45 +25,47 @@ public class Bot extends TelegramLongPollingBot {
         if (update.hasMessage()) {
             Message message = update.getMessage();
             String chatId = message.getChatId().toString();
-            String text = null;
+            String text;
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(chatId);
+            Weather weather = new Weather();
             if (message.hasText()) {
                 text = update.getMessage().getText();
-                log.info("Получено новое сообщение: " + text);
+                log.info("Получено сообщение: " + text);
+                if ("/start".equals(text)) {
+                    sendMessage.setText("Добро пожаловать в мой тестовый бот. \nПришлите название города или свою геолокацию, а я попробую найти погоду");
+                } else {
+                    if (weather.getWeather(text)) {
+                        sendMessage.setText(weather.toString());
+                    } else {
+                        sendMessage.setText("Город не найден");
+                    }
+                }
             }
             if (message.hasLocation()) {
                 Location loc = update.getMessage().getLocation();
                 log.info("Получена геолокация: " + loc);
-                System.out.println(loc);
-            }
-            SendMessage sendMessage = new SendMessage();
-            sendMessage.setChatId(chatId);
-
-            Weather weather = new Weather();
-            if ("/start".equals(text)) {
-                sendMessage.setText("Добро пожаловать в мой тестовый бот. Пришлите название города, а я попробую найти текущую температуру в этом городе");
-            } else {
-                sendMessage.setText(weather.getTemp(text));
+                if (weather.getWeather(Double.toString(loc.getLatitude()), Double.toString(loc.getLongitude()))) {
+                    sendMessage.setText(weather.toString());
+                } else {
+                    sendMessage.setText("Погода по координатам не найдена");
+                }
             }
             try {
                 execute(sendMessage); // отправка ответа
             } catch (TelegramApiException e) {
-                e.printStackTrace();
+                log.error("Error", e);
             }
         }
     }
 
     public void botConnect() {
-        TelegramBotsApi telegramBotsApi = null;
         try {
-            telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-        try {
+            var telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
             telegramBotsApi.registerBot(this);
             log.info("Бот запущен");
         } catch (TelegramApiException e) {
-            log.info("Не удалось подключиться. Ошибка: " + e.getMessage());
+            log.error("Не удалось подключиться. Ошибка: ", e);
         }
     }
 
